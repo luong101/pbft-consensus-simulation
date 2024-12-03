@@ -36,7 +36,6 @@ func (hs *HelloService) SendHello(ctx context.Context, req *HelloRequest, res *H
 	return nil
 }
 
-
 // Notifee là một struct implement interface mdns.Notifee
 type Notifee struct {
 	host host.Host
@@ -53,15 +52,15 @@ func (n *Notifee) HandlePeerFound(peerInfo peer.AddrInfo) {
 		log.Printf("Failed to connect to peer %s: %v", peerInfo.ID, err)
 		return
 	}
-	log.Printf("Connected to peer: %s", peerInfo.ID)
+	log.Printf("Connected to peer: %s", peerInfo.ID.ShortString())
 
 	// Create an RPC client for the discovered peer
 	client := gorpc.NewClient(n.host, protocolID)
 
 	// Send a Hello message to the peer
 	req := &HelloRequest{
-		Message: "Hello from " + n.host.ID().String(),
-		Sender:  n.host.ID().String(),
+		Message: "Hello from " + n.host.ID().ShortString(),
+		Sender:  n.host.ID().ShortString(),
 	}
 	res := &HelloResponse{}
 	err = client.Call(peerInfo.ID, "HelloService", "SendHello", req, res)
@@ -71,7 +70,6 @@ func (n *Notifee) HandlePeerFound(peerInfo peer.AddrInfo) {
 	}
 	log.Printf("Received response from peer %s: %s", peerInfo.ID, res.Ack)
 }
-
 
 func main() {
 	// Create a new libp2p host
@@ -84,7 +82,7 @@ func main() {
 	defer host.Close()
 
 	// Display host information
-	fmt.Println("Host created with ID:", host.ID().String())
+	fmt.Println("Host created with ID:", host.ID().ShortString())
 	for _, addr := range host.Addrs() {
 		fmt.Println("Listening on:", addr.String())
 	}
@@ -110,4 +108,3 @@ func main() {
 
 	select {} // Keep the application running
 }
-
