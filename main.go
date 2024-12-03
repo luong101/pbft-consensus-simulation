@@ -1,15 +1,16 @@
 package main
 
 import (
+	node "RAFT/pkg/node"
 	"context"
 	"fmt"
 	"log"
+	"math"
 
 	"github.com/libp2p/go-libp2p"
 	gorpc "github.com/libp2p/go-libp2p-gorpc"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/libp2p/go-libp2p/core/peerstore"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
 )
@@ -39,12 +40,15 @@ func (hs *HelloService) SendHello(ctx context.Context, req *HelloRequest, res *H
 // Notifee là một struct implement interface mdns.Notifee
 type Notifee struct {
 	host host.Host
-	port int
+	node *node.Node
 }
 
+// HandlePeerFound handles newly discovered peers
 func (n *Notifee) HandlePeerFound(peerInfo peer.AddrInfo) {
-	// Add peer info to the peerstore
-	n.host.Peerstore().AddAddrs(peerInfo.ID, peerInfo.Addrs, peerstore.PermanentAddrTTL)
+	log.Printf("Discovered peer: %s", peerInfo.ID)
+	// Add the peer info to the peerstore
+	n.host.Peerstore().AddAddrs(peerInfo.ID, peerInfo.Addrs, math.MaxInt64)
+	log.Printf("Discovered peer: %s with addresses: %v", peerInfo.ID, peerInfo.Addrs)
 
 	// Connect to the peer
 	err := n.host.Connect(context.Background(), peerInfo)
@@ -54,13 +58,13 @@ func (n *Notifee) HandlePeerFound(peerInfo peer.AddrInfo) {
 	}
 	log.Printf("Connected to peer: %s", peerInfo.ID.ShortString())
 
-	// Create an RPC client for the discovered peer
-	client := gorpc.NewClient(n.host, protocolID)
+	// Add the peer to the node's peer list
+	n.node.AddPeer(peerInfo)
 
 	// Send a Hello message to the peer
 	req := &HelloRequest{
-		Message: "Hello from " + n.host.ID().ShortString(),
-		Sender:  n.host.ID().ShortString(),
+		Message: "Hello from " + n.host.ID().String(),
+		Sender:  n.host.ID().String(),
 	}
 	res := &HelloResponse{}
 	err = client.Call(peerInfo.ID, "HelloService", "SendHello", req, res)
@@ -87,17 +91,24 @@ func main() {
 		fmt.Println("Listening on:", addr.String())
 	}
 
-	// Create an RPC server and register the HelloService
-	rpcServer := gorpc.NewServer(host, protocolID)
-	helloService := &HelloService{}
-	err = rpcServer.Register(helloService)
+	// Create a new Node instance
+	nodeInstance, err := node.NewNode(host.ID())
 	if err != nil {
-		log.Fatal("Failed to register HelloService:", err)
+		log.Fatal("Failed to create node:", err)
+	}
+	nodeInstance.Host = host // Associate the host with the node
+
+	//Register service
+	raftService := &node.RaftScv{}
+	nodeInstance.RPCServer = gorpc.NewServer(host, protocolID)
+	err = nodeInstance.RPCServer.Register(raftService)
+	if err != nil {
+		log.Fatal("Failed to register RPC service:", err)
 	}
 
-	// Start mDNS discovery with Notifee
-	notifee := &Notifee{host: host}
-	serviceName := "local-discovery"
+	// Set up mDNS for peer discovery
+	notifee := &Notifee{host: host, node: nodeInstance}
+	serviceName := "raft-cluster"
 	mdnsService := mdns.NewMdnsService(host, serviceName, notifee)
 	if err := mdnsService.Start(); err != nil {
 		log.Fatal("Failed to start mDNS service:", err)
@@ -105,6 +116,15 @@ func main() {
 	defer mdnsService.Close()
 
 	fmt.Println("mDNS service started. Discovering peers...")
+
+	// Periodic logging of node state
+	nodeInstance.Start()
+	// go func() {
+	// 	for {
+	// 		time.Sleep(10 * time.Second)
+	// 		nodeInstance.LogState()
+	// 	}
+	// }()
 
 	select {} // Keep the application running
 }
