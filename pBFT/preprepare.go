@@ -9,8 +9,8 @@ import (
 )
 
 type PrePrepare struct {
-	View           uint64
-	SequenceNumber uint64
+	View           uint
+	SequenceNumber uint
 	Block          Block
 	Digest         string // Block hash
 	Signature      []byte // Need or not ?
@@ -123,4 +123,17 @@ func (r *Replica) processPrePrepare(ctx context.Context, replica peer.ID, msg Pr
 	}
 
 	return r.maybeSendCommit(ctx, msg.View, msg.SequenceNumber, msg.Digest)
+}
+
+func (r *Replica) conflictingPrePrepare(preprepare PrePrepare) bool {
+
+	for _, pp := range r.preprepares {
+
+		// If we have a pre-prepare with the same view and same digest but different sequence number - invalid.
+		if pp.View == preprepare.View && pp.Digest == preprepare.Digest && pp.SequenceNumber != preprepare.SequenceNumber {
+			return true
+		}
+	}
+
+	return false
 }
