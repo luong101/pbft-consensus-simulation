@@ -21,7 +21,7 @@ var ErrConflictingPreprepare = errors.New("conflicting pre-prepare")
 
 // Gửi preprepare đi
 // Replica chưa có
-func (r *Replica) send_prePrepare(ctx context.Context, block Block) error {
+func (r *Replica) sendPrePrepare(ctx context.Context, block Block) error {
 	// Chỉ có primary node mới dc gửi
 	if !r.isPrimary() {
 		return nil
@@ -114,8 +114,16 @@ func (r *Replica) processPrePrepare(ctx context.Context, replica peer.ID, msg Pr
 	// Nếu chưa có block đó -> block mới
 	// Lưu block từ thông điệp PrePrepare
 	r.preprepares[id] = msg
-	r.blocks[msg.Digest] = msg.Block
 
+	r.blocks[msg.Digest] = msg.Block
+	r.peending[msg.Digest] = msg.Block
+
+	r.startRequestTimer(false)
+
+	if !r.prePrepared(msg.View, msg.SequenceNumber, msg.Digest) {
+		log.Warn().Msg("request is not pre-prepared, stopping")
+		return nil
+	}
 	log.Info().Msg("processed pre-prepare")
 
 	// Phát thông điệp Prepare
@@ -130,8 +138,6 @@ func (r *Replica) processPrePrepare(ctx context.Context, replica peer.ID, msg Pr
 func (r *Replica) conflictingPrePrepare(preprepare PrePrepare) bool {
 
 	for _, pp := range r.preprepares {
-
-		// If we have a pre-prepare with the same view and same digest but different sequence number - invalid.
 		if pp.View == preprepare.View && pp.Digest == preprepare.Digest && pp.SequenceNumber != preprepare.SequenceNumber {
 			return true
 		}
