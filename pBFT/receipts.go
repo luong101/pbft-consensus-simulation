@@ -25,33 +25,54 @@ func newPrepareReceipts() *prepareReceipts {
 }
 
 // Ánh xạ từ node ID (peer.ID) tới Commit message
-// type commitReceipts struct {
-// 	m map[peer.ID]Commit
-// 	*sync.Mutex
-// }
+type commitReceipts struct {
+	m map[peer.ID]Commit
+	*sync.Mutex
+}
 
-// func newCommitReceipts() *commitReceipts {
+func newCommitReceipts() *commitReceipts {
 
-// 	cr := commitReceipts{
-// 		m:     make(map[peer.ID]Commit),
-// 		Mutex: &sync.Mutex{},
-// 	}
+	cr := commitReceipts{
+		m:     make(map[peer.ID]Commit),
+		Mutex: &sync.Mutex{},
+	}
 
-// 	return &cr
-// }
+	return &cr
+}
 
 // Ánh xạ từ node ID (peer.ID) tới View change
-// type viewChangeReceipts struct {
-// 	m map[peer.ID]ViewChange
-// 	*sync.Mutex
-// }
 
-// func newViewChangeReceipts() *viewChangeReceipts {
+type PrepareInfo struct {
+	View           uint                `json:"view"`
+	SequenceNumber uint                `json:"sequence_number"`
+	Digest         string              `json:"digest"`
+	PrePrepare     PrePrepare          `json:"preprepare"`
+	Prepares       map[peer.ID]Prepare `json:"prepares"`
+}
 
-// 	vcr := viewChangeReceipts{
-// 		m:     make(map[peer.ID]ViewChange),
-// 		Mutex: &sync.Mutex{},
-// 	}
+type ViewChange struct {
+	View     uint          
+	Prepares []PrepareInfo 
 
-// 	return &vcr
-// }
+	// Signed digest of the view change message.
+	Signature string 
+
+	// Technically, view change message also includes:
+	//	- n - sequence number of the last stable checkpoint => not needed here since we don't support checkpoints
+	//  - C - 2f+1 checkpoint messages proving the correctness of s => see above
+}
+
+type viewChangeReceipts struct {
+	m map[peer.ID]ViewChange
+	*sync.Mutex
+}
+
+func newViewChangeReceipts() *viewChangeReceipts {
+
+	vcr := viewChangeReceipts{
+		m:     make(map[peer.ID]ViewChange),
+		Mutex: &sync.Mutex{},
+	}
+
+	return &vcr
+}
