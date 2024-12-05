@@ -12,8 +12,9 @@ type PrePrepare struct {
 	View           uint
 	SequenceNumber uint
 	Block          Block
-	Digest         string // Block hash
-	Signature      []byte // Need or not ?
+	// Request Request
+	Digest    string // Block hash
+	Signature []byte // Need or not ?
 }
 
 var ErrConflictingPreprepare = errors.New("conflicting pre-prepare")
@@ -33,7 +34,8 @@ func (r *Replica) send_prePrepare(ctx context.Context, block Block) error {
 		View:           r.view,
 		SequenceNumber: sequence,
 		Block:          block,
-		Digest:         getDigest(block),
+		// Request: req
+		Digest: getDigest(block),
 	}
 
 	log := r.log.With().
@@ -47,14 +49,14 @@ func (r *Replica) send_prePrepare(ctx context.Context, block Block) error {
 	}
 
 	// Ký thông điệp
-	err := r.sign(&msg)
-	if err != nil {
-		return fmt.Errorf("could not sign pre-prepare message: %w", err)
-	}
+	// err := r.sign(&msg)
+	// if err != nil {
+	// 	return fmt.Errorf("could not sign pre-prepare message: %w", err)
+	// }
 
 	// Phát broadcast thông điệp đến các node khác
 	log.Info().Msg("broadcasting pre-prepare message")
-	err = r.broadcast(ctx, &msg)
+	err := r.broadcast(ctx, &msg)
 	if err != nil {
 		return fmt.Errorf("could not broadcast pre-prepare message: %w", err)
 	} else {
@@ -62,7 +64,7 @@ func (r *Replica) send_prePrepare(ctx context.Context, block Block) error {
 	}
 
 	// Ghi nhận thông điệp này
-	// r.preprepares[getMessageID(msg.View, msg.SequenceNumber)] = msg // suy nghĩ thêm
+	r.preprepares[getMessageID(msg.View, msg.SequenceNumber)] = msg
 
 	return nil
 }
@@ -96,10 +98,10 @@ func (r *Replica) processPrePrepare(ctx context.Context, replica peer.ID, msg Pr
 	}
 
 	// Xác minh chữ ký của thông điệp
-	err := r.verifySignature(&msg, r.primaryReplicaID())
-	if err != nil {
-		return fmt.Errorf("pre-prepare message signature not valid: %w", err)
-	}
+	// err := r.verifySignature(&msg, r.primaryReplicaID())
+	// if err != nil {
+	// 	return fmt.Errorf("pre-prepare message signature not valid: %w", err)
+	// }
 
 	// Kiểm tra nếu đã có block đó rồi
 	id := getMessageID(msg.View, msg.SequenceNumber)
@@ -117,7 +119,7 @@ func (r *Replica) processPrePrepare(ctx context.Context, replica peer.ID, msg Pr
 	log.Info().Msg("processed pre-prepare")
 
 	// Phát thông điệp Prepare
-	err = r.sendPrepare(ctx, msg)
+	err := r.sendPrepare(ctx, msg)
 	if err != nil {
 		return fmt.Errorf("could not send prepare message: %w", err)
 	}
