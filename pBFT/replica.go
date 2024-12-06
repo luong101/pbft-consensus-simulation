@@ -57,7 +57,7 @@ type Replica struct {
 	metrics *metrics.Metrics
 }
 
-func NewReplica(log zerolog.Logger, host *host.Host, executor blockless.Executor, peers []peer.ID, clusterID string, options ...Option) (*Replica, error) {
+func NewReplica(log zerolog.Logger, host *host.Host, peers []peer.ID, clusterID string /*, options ...Option */) (*Replica, error) {
 
 	total := uint(len(peers))
 
@@ -69,9 +69,9 @@ func NewReplica(log zerolog.Logger, host *host.Host, executor blockless.Executor
 	cfg := DefaultConfig
 
 	// Thiết lập các thay đổi cho config
-	for _, option := range options {
-		option(&cfg)
-	}
+	// for _, option := range options {
+	// 	option(&cfg)
+	// }
 
 	// Tạo instance
 	replica := Replica{
@@ -80,9 +80,9 @@ func NewReplica(log zerolog.Logger, host *host.Host, executor blockless.Executor
 
 		cfg: cfg,
 
-		log:        log.With().Str("component", "pbft").Str("cluster", clusterID).Logger(),
-		host:       host,
-		executor:   executor,
+		log:  log.With().Str("component", "pbft").Str("cluster", clusterID).Logger(),
+		host: host,
+		//executor:   executor,
 		clusterID:  clusterID,
 		protocolID: protocol.ID(fmt.Sprintf("%s/cluster/%s", Protocol, clusterID)),
 
@@ -100,6 +100,7 @@ func NewReplica(log zerolog.Logger, host *host.Host, executor blockless.Executor
 	replica.setPBFTMessageHandler()
 
 	return &replica, nil
+
 }
 
 // Trả về loại thuật toán đồng thuận đang sử dụng (pBFT)
@@ -236,7 +237,7 @@ func (r *Replica) primaryReplicaID() peer.ID {
 }
 
 // Kiểm tra xem replica có phải là primary
-func (r *Replica) isPrimary() bool {
+func (r *Replica) IsPrimary() bool {
 	return r.id == r.primaryReplicaID()
 }
 
@@ -270,6 +271,7 @@ func (r *Replica) isMessageAllowed(msg interface{}) error {
 	default:
 		return ErrViewChange
 	}
+
 }
 
 // Loại bỏ preprepares, prepares, commist cũ(view nhỏ hơn thresholdView) và pending requests

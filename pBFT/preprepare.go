@@ -31,7 +31,7 @@ type PrePrepare struct {
 // Replica chưa có
 func (r *Replica) sendPrePrepare(ctx context.Context, req Request) error {
 	// Chỉ có primary node mới dc gửi
-	if !r.isPrimary() {
+	if !r.IsPrimary() {
 		return nil
 	}
 
@@ -80,7 +80,7 @@ func (r *Replica) sendPrePrepare(ctx context.Context, req Request) error {
 // Nhận preprepare rồi check tính hợp lệ
 func (r *Replica) processPrePrepare(ctx context.Context, replica peer.ID, msg PrePrepare) error {
 	// Primary node k được nhận thông điệp
-	if r.isPrimary() {
+	if r.IsPrimary() {
 		r.log.Warn().Msg("primary replica received a pre-prepare, dropping")
 		return nil
 	}

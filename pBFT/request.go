@@ -11,10 +11,10 @@ import (
 
 func (r *Replica) processRequest(ctx context.Context, from peer.ID, req Request) error {
 
-	_, err := req.Origin.ExtractPublicKey()
-	if err != nil {
-		return fmt.Errorf("could not extract public key from client: %w", err)
-	}
+	// _, err := req.Origin.ExtractPublicKey()
+	// if err != nil {
+	// 	return fmt.Errorf("could not extract public key from client: %w", err)
+	// }
 
 	// err = req.Execute.VerifySignature(pub)
 	// if err != nil {
@@ -41,7 +41,7 @@ func (r *Replica) processRequest(ctx context.Context, from peer.ID, req Request)
 	}
 
 	// If we're not the primary, we'll drop the request. We do start a request timer though.
-	if !r.isPrimary() {
+	if !r.IsPrimary() {
 		r.startRequestTimer(false)
 		log.Info().Str("primary", r.primaryReplicaID().String()).Msg("we are not the primary replica, dropping the request")
 
