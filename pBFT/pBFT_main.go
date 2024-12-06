@@ -2,7 +2,7 @@ package mainpBFT
 
 import "fmt"
 
-func MainpBFT() {
+func tmp() {
 	file := "blockchain.txt"
 
 	// Khởi tạo blockchain, nếu file đã tồn tại thì không làm gì
@@ -39,4 +39,8 @@ func MainpBFT() {
 		fmt.Printf("BlockHeight: %d, Hash: %s, PrevHash: %s\n",
 			block.BlockHeight, block.BlockHash, block.PreviousBlockHash)
 	}
+}
+
+func MainpBFT() {
+	
 }

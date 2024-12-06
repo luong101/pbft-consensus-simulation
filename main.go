@@ -4,11 +4,11 @@ import (
 	node "RAFT/pkg/node"
 	"context"
 	"fmt"
+	"log"
 	"math"
 
 	"github.com/libp2p/go-libp2p/core/peer"
-
-	mainpBFT "RAFT/pBFT"
+	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
 )
 
 type DiscoverHandler struct {
@@ -32,33 +32,32 @@ func (dh *DiscoverHandler) HandlePeerFound(pi peer.AddrInfo) {
 }
 
 func main() {
-	// // Create a new Node
-	// node, err := node.NewNode()
-	// if err != nil {
-	// 	log.Fatalf("Failed to create node: %v", err)
-	// }
-	// defer node.Host.Close()
+	// Create a new Node
+	node, err := node.NewNode()
+	if err != nil {
+		log.Fatalf("Failed to create node: %v", err)
+	}
+	defer node.Host.Close()
 
-	// fmt.Printf("Node created. ID: %s, Addresses: %v\n", node.Host.ID(), node.Host.Addrs())
+	fmt.Printf("Node created. ID: %s, Addresses: %v\n", node.Host.ID(), node.Host.Addrs())
 
-	// // Register RPC services
-	// err = node.RegisterServices()
-	// if err != nil {
-	// 	log.Fatalf("Failed to register RPC services: %v", err)
-	// }
+	// Register RPC services
+	err = node.RegisterServices()
+	if err != nil {
+		log.Fatalf("Failed to register RPC services: %v", err)
+	}
 
-	// // Set up mDNS discovery
-	// serviceName := "p2p-mdns"
-	// mdnsService := mdns.NewMdnsService(node.Host, serviceName, &DiscoverHandler{Node: node})
-	// if err := mdnsService.Start(); err != nil {
-	// 	log.Fatalf("Failed to start mDNS discovery: %v", err)
-	// }
-	// defer mdnsService.Close()
+	// Set up mDNS discovery
+	serviceName := "p2p-mdns"
+	mdnsService := mdns.NewMdnsService(node.Host, serviceName, &DiscoverHandler{Node: node})
+	if err := mdnsService.Start(); err != nil {
+		log.Fatalf("Failed to start mDNS discovery: %v", err)
+	}
+	defer mdnsService.Close()
 
-	// fmt.Println("[mDNS] Service started, waiting for peers...")
+	fmt.Println("[mDNS] Service started, waiting for peers...")
 
-	// // Keep the program running
-	// select {}
+	// Keep the program running
+	select {}
 
-	mainpBFT.MainpBFT()
 }
