@@ -23,7 +23,7 @@ func (dh *DiscoverHandler) HandlePeerFound(pi peer.AddrInfo) {
 		fmt.Printf("Failed to connect to peer %s: %v\n", pi.ID, err)
 		return
 	}
-
+	
 	// Send a Hello message
 	// dh.Node.SendHello(pi.ID)
 	dh.Node.Host.Peerstore().AddAddrs(pi.ID, pi.Addrs, math.MaxInt64)
@@ -39,7 +39,7 @@ func main() {
 	}
 	defer node.Host.Close()
 
-	fmt.Printf("Node created. ID: %s, Addresses: %v\n", node.Host.ID(), node.Host.Addrs())
+	fmt.Printf("Node created. ID: %s \n", node.Host.ID().ShortString())
 
 	// Register RPC services
 	err = node.RegisterServices()
@@ -57,7 +57,8 @@ func main() {
 
 	fmt.Println("[mDNS] Service started, waiting for peers...")
 
+	peers := node.Host.Peerstore().Peers()
+	fmt.Printf("=== Số lượng node: %d\n", len(peers))
 	// Keep the program running
 	select {}
-
 }
