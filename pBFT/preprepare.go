@@ -28,7 +28,6 @@ type PrePrepare struct {
 //var ErrConflictingPreprepare = errors.New("conflicting pre-prepare")
 
 // Gửi preprepare đi
-// Replica chưa có
 func (r *Replica) sendPrePrepare(ctx context.Context, req Request) error {
 	// Chỉ có primary node mới dc gửi
 	if !r.IsPrimary() {
