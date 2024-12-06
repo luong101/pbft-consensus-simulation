@@ -37,7 +37,7 @@ func (r *Replica) maybeSendCommit(ctx context.Context, view uint, sequenceNo uin
 	}
 	log.Info().Msg("request committed, executing")
 
-	return r.execute(ctx, view, sequenceNo, digest)
+	return r.execute(ctx, view, sequenceNo, digest) // File execute.go
 }
 
 // Quyết định xem có nên gửi Commit không
