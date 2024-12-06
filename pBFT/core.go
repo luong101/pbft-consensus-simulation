@@ -46,6 +46,8 @@ func (c pbftCore) currentPrimary() uint {
 	return c.view % c.n
 }
 
+
+
 // TÌM TRÊN ID NHỎ NHẤT
 func (c pbftCore) primaryNode() peer.ID {
 	// Sao chép danh sách nodes để không làm thay đổi danh sách gốc.

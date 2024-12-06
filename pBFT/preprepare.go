@@ -2,14 +2,18 @@ package mainpBFT
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"time"
 
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
 type Request struct {
-	Payload string
+	BaseMessage
+	ID        string    `json:"id"`
+	Timestamp time.Time `json:"timestamp"`
+	Origin    peer.ID   `json:"origin"`
+	Execute   Block     `json:"execute"`
 }
 
 type PrePrepare struct {
@@ -21,7 +25,7 @@ type PrePrepare struct {
 	Signature []byte // Need or not ?
 }
 
-var ErrConflictingPreprepare = errors.New("conflicting pre-prepare")
+//var ErrConflictingPreprepare = errors.New("conflicting pre-prepare")
 
 // Gửi preprepare đi
 // Replica chưa có
