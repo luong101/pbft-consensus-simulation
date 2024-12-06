@@ -39,7 +39,7 @@ func main() {
 	}
 	defer node.Host.Close()
 
-	fmt.Printf("Node created. ID: %s, Addresses: %v\n", node.Host.ID(), node.Host.Addrs())
+	fmt.Printf("Node created. ID: %s \n", node.Host.ID().ShortString())
 
 	// Register RPC services
 	err = node.RegisterServices()

@@ -3,6 +3,10 @@ package node
 import (
 	"context"
 	"fmt"
+	"math/rand"
+	"strconv"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/libp2p/go-libp2p"
@@ -13,9 +17,10 @@ import (
 )
 
 const (
-	protocolID  = protocol.ID("/p2p/rpc/ping")
-	serviceName = "RaftService"
-	RequestVote = "RequestVote"
+	protocolID    = protocol.ID("/p2p/rpc/ping")
+	serviceName   = "RaftService"
+	RequestVote   = "RequestVote"
+	AppendEntries = "AppendEntriesRPC"
 )
 
 const (
@@ -40,14 +45,34 @@ type RequestVoteReply struct {
 	VoteGranted bool
 }
 
+type Entries struct {
+	ID  int
+	Msg string
+}
+type AppendEntriesReq struct {
+	TermID       int
+	LeaderID     peer.ID
+	prevLogTerm  int
+	prevLogIndex int
+	Entry        []Entries
+	LeaderCommit int
+}
+type AppendEntriesReply struct {
+	TermID  int
+	Success bool
+}
+
 type Node struct {
 	//private
 	electionTimeout time.Duration
-	votedFor        *peer.ID
+	votedFor        string
 	termID          int
 	heartBeatCh     chan (int)
+	leaderCh        chan (int)
 	lastLogIndex    int
 	lastLogTerm     int
+	commitIndex     int
+	log             []Entries
 	//public
 	State        Role
 	Host         host.Host
@@ -78,12 +103,15 @@ func NewNode() (*Node, error) {
 		NumberOfNode: 0,
 
 		// Private fields
-		electionTimeout: time.Duration(150+time.Now().UnixNano()%150) * time.Millisecond,
+		electionTimeout: time.Duration(15000+rand.Intn(15000)) * time.Millisecond,
 		termID:          0,                 // Start termID from 0
-		votedFor:        nil,               // No vote initially
+		votedFor:        "",                // No vote initially
 		heartBeatCh:     make(chan int, 1), // Buffered channel for heartbeats
-		lastLogIndex:    0,                 // Placeholder for last log index
-		lastLogTerm:     0,                 // Placeholder for last log term
+		leaderCh:        make(chan int, 1),
+		lastLogIndex:    0, // Placeholder for last log index
+		lastLogTerm:     0, // Placeholder for last log term
+		commitIndex:     0,
+		log:             nil,
 	}
 
 	return node, nil
@@ -94,115 +122,269 @@ func (node *Node) RegisterServices() error {
 	return node.RPCServer.Register(&RaftService{node})
 }
 
-func CopyToIfaces(in []*RequestVoteReply) []interface{} {
-	ifaces := make([]interface{}, len(in))
-	for i := range in {
-		in[i] = &RequestVoteReply{}
-		ifaces[i] = in[i]
-	}
-	return ifaces
-}
-
-func Ctxts(n int) []context.Context {
-	ctxs := make([]context.Context, n)
-	for i := 0; i < n; i++ {
-		ctxs[i] = context.Background()
-	}
-	return ctxs
-}
-
 func (rft *RaftService) RequestVote(ctx context.Context, request *RequestVoteReq, reply *RequestVoteReply) error {
 	node := rft.node
-	if request.TermID < node.termID {
+
+	// Reject request if the term is outdated
+	if request.TermID <= node.termID {
 		reply.TermID = node.termID
-		reply.VoteGranted = true
+		reply.VoteGranted = false
+		fmt.Println("This 1")
 		return nil
 	}
 
+	// Update to a newer term if the request has a higher term
 	if request.TermID > node.termID {
 		node.termID = request.TermID
-		node.votedFor = nil // reset vote
+		node.votedFor = "" // Reset vote for the new term
 	}
 
-	if node.votedFor == nil || *node.votedFor == request.CandidateID {
-		if request.LastLogTerm > node.lastLogTerm || (request.LastLogTerm == node.lastLogTerm && request.LastLogIndex >= node.lastLogIndex) {
-			node.votedFor = &request.CandidateID
+	if len(node.log) > 0 {
+		node.lastLogIndex = len(node.log) - 1
+		node.lastLogTerm = node.log[node.lastLogIndex].ID
+	}
+
+	// Check voting conditions
+	if node.votedFor == "" || node.votedFor == request.CandidateID.ShortString() {
+		if request.LastLogTerm > node.lastLogTerm ||
+			(request.LastLogTerm == node.lastLogTerm && request.LastLogIndex >= node.lastLogIndex) {
+			node.votedFor = request.CandidateID.ShortString()
 			reply.TermID = node.termID
 			reply.VoteGranted = true
 			return nil
 		}
 	}
 
+	// If conditions are not met, do not grant the vote
 	reply.TermID = node.termID
 	reply.VoteGranted = false
 	return nil
 }
 
-func (node *Node) BroadCastRequestVote() {
-	fmt.Println("[!] ", node.Host.ID(), " broad cast")
-	peers := node.Host.Peerstore().Peers()
-	var reply RequestVoteReply
-	var numberOfVote int = 1
-	
-	for _, peer := range peers {
-		err := node.RPCClient.Call(peer, serviceName, RequestVote, &RequestVoteReq{
-			TermID:       node.termID,
-			CandidateID:  node.Host.ID(),
-			LastLogIndex: node.lastLogIndex,
-			LastLogTerm:  node.lastLogTerm,
-		}, &reply)
+func (rscv *RaftService) AppendEntriesRPC(ctx context.Context, req *AppendEntriesReq, rep *AppendEntriesReply) error {
+	node := rscv.node
+	node.heartBeatCh <- 1 // Signal a heartbeat received
 
-		if err != nil {
-			fmt.Println("Error at", peer.ShortString())
-		} else {
-			if reply.VoteGranted {
-				numberOfVote++
-			}
-			fmt.Println("Vote", peer.ShortString(), reply.VoteGranted)
+	if req.TermID < node.termID {
+		rep.TermID = node.termID
+		rep.Success = false
+		return nil
+	}
+
+	if req.prevLogTerm > 0 && (req.prevLogTerm >= len(node.log) || node.log[req.prevLogTerm].ID != req.prevLogTerm) {
+		rep.TermID = node.termID
+		rep.Success = false
+		return nil
+	}
+
+	// Delete the existing entries conflict with the new one
+	if req.prevLogIndex > 0 && req.prevLogIndex < len(node.log) && req.prevLogTerm != node.log[req.prevLogIndex].ID {
+		node.log = node.log[:req.prevLogIndex]
+	}
+
+	//Append entry not already in log
+	for _, entry := range req.Entry {
+		if entry.ID > len(node.log) {
+			node.log = append(node.log, entry)
 		}
 	}
 
-	if numberOfVote > node.NumberOfNode/2 {
-		node.State = 2
+	if len(node.log) > 0 {
+		node.lastLogIndex = len(node.log) - 1
+		node.lastLogTerm = node.log[node.lastLogIndex].ID
 	}
-	// var replies = make([]*RequestVoteReply, len(peers))
-	// node.termID++
 
-	// errs := node.RPCClient.MultiCall(
-	// 	Ctxts(len(peers)),
-	// 	peers,
-	// 	serviceName,
-	// 	RequestVote,
-	// 	RequestVoteReq{
-	// 		TermID:       node.termID,
-	// 		CandidateID:  node.Host.ID(),
-	// 		LastLogIndex: node.lastLogIndex,
-	// 		LastLogTerm:  node.lastLogTerm,
-	// 	},
-	// 	CopyToIfaces(replies),
-	// )
+	if req.LeaderCommit > node.lastLogIndex {
+		node.commitIndex = min(req.LeaderCommit, len(node.log)-1)
+	}
 
-	// for i, err := range errs {
-	// 	if err != nil {
-	// 		fmt.Println("[!] error at", i, err.Error())
-	// 	} else {
-	// 		fmt.Println("Node", i, "vote", replies[i].VoteGranted)
-	// 	}
-	// }
+	node.State = Follower
+	node.termID = req.TermID
+	rep.Success = true
+	return nil
+}
+func (node *Node) sendHeartbeat(entries []Entries) {
+	PrevLogIndex := 0
+	PrevLogTerm := 0
+
+	if len(entries) != 0 {
+		if len(node.log) != 0 {
+			PrevLogIndex = len(node.log) - 1
+			PrevLogTerm = node.log[PrevLogIndex].ID
+		}
+		node.log = append(node.log, entries...)
+	}
+
+	for _, e := range node.log {
+		fmt.Println("message: ", e.Msg)
+	}
+
+	for {
+		// Ensure the node is still the leader
+		if node.State != Leader {
+			fmt.Println("[*] Node is no longer leader, stopping heartbeats.")
+			return
+		}
+
+		fmt.Println("sendHeartbeat: Sending heartbeats to all peers...")
+
+		peers := node.Host.Peerstore().Peers()
+		for _, p := range peers {
+			// Skip self
+			if p == node.Host.ID() {
+				continue
+			}
+
+			// Launch a goroutine for each peer
+			go func(peerID peer.ID) {
+				// Create a timeout context for the heartbeat
+				ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+				defer cancel()
+
+				var reply AppendEntriesReply
+
+				err := node.RPCClient.CallContext(ctx, peerID, serviceName, AppendEntries, &AppendEntriesReq{
+					TermID:       node.termID,
+					LeaderID:     node.Host.ID(),
+					prevLogTerm:  PrevLogTerm,
+					prevLogIndex: PrevLogIndex,
+					LeaderCommit: node.commitIndex,
+					Entry:        node.log, // Heartbeat only
+				}, &reply)
+
+				if err != nil {
+					fmt.Println("[!] Failed to send heartbeat to", peerID.ShortString(), ":", err)
+					node.removeUnresponsiveNode(peerID)
+				} else {
+					fmt.Println("Heartbeat sent to", peerID.ShortString())
+
+				}
+
+			}(p)
+		}
+
+		time.Sleep(5000 * time.Millisecond) // Periodic heartbeat
+	}
+}
+
+func (node *Node) printEntries() {
+	fmt.Println("Current term: ", node.termID)
+
+	for _, e := range node.log {
+		fmt.Println("command ", e.Msg)
+	}
+}
+
+// removeUnresponsiveNode removes a node from the peer list
+func (node *Node) removeUnresponsiveNode(peerID peer.ID) {
+	// Remove peer from the Peerstore
+	node.Host.Peerstore().RemovePeer(peerID)
+
+	// Clear all addresses associated with the peer
+	node.Host.Peerstore().ClearAddrs(peerID)
+
+	// Log the removal
+	fmt.Println("[*] Removed unresponsive node:", peerID.ShortString())
+}
+
+func (node *Node) BroadCastRequestVote() {
+	fmt.Println("[!] ", node.Host.ID(), " broadcasting vote requests")
+	peers := node.Host.Peerstore().Peers()
+	var votes int32 = 1 // Vote for self (use atomic for thread safety)
+
+	if len(peers) < 3 {
+		fmt.Println("[!] Insufficient peers to form a majority.")
+		return
+	}
+
+	node.termID++                                // Increment term before election
+	node.votedFor = node.Host.ID().ShortString() // Vote for self
+
+	var LastLogIndex, LastLogTerm int
+	if len(node.log) == 0 {
+		LastLogIndex = 0
+		LastLogTerm = 0
+	} else {
+		LastLogIndex = len(node.log) - 1
+		LastLogTerm = node.log[LastLogIndex].ID
+	}
+
+	fmt.Println("Candidate current term: ", node.termID)
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex // Protects access to shared resources
+	responsivePeers := make([]peer.ID, 0)
+
+	for _, p := range peers {
+		if p == node.Host.ID() {
+			continue
+		}
+
+		wg.Add(1)
+		go func(peerID peer.ID) {
+			defer wg.Done()
+
+			// Create a timeout context for the vote request
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+			defer cancel()
+
+			var reply RequestVoteReply
+			err := node.RPCClient.CallContext(ctx, peerID, serviceName, RequestVote, &RequestVoteReq{
+				TermID:       node.termID,
+				CandidateID:  node.Host.ID(),
+				LastLogIndex: LastLogIndex,
+				LastLogTerm:  LastLogTerm,
+			}, &reply)
+
+			if err != nil {
+				fmt.Println("[!] Error requesting vote from", peerID.ShortString(), ":", err)
+				node.removeUnresponsiveNode(peerID)
+				return
+			}
+
+			// Process the response
+			mu.Lock()
+			if reply.VoteGranted {
+				atomic.AddInt32(&votes, 1)
+			}
+			responsivePeers = append(responsivePeers, peerID)
+			mu.Unlock()
+
+			fmt.Println("[+] Vote from", peerID.ShortString(), ":", reply.VoteGranted)
+		}(p)
+	}
+
+	wg.Wait()
+
+	// Check if the node has received majority votes
+	if votes > int32((len(responsivePeers)+1)/2) {
+		fmt.Println("[+] Received majority votes. Becoming leader.")
+		node.leaderCh <- 1
+	} else {
+		fmt.Println("[-] Insufficient votes. Staying Candidate.")
+	}
+
 }
 
 func (node *Node) Start() {
 	for {
-		switch node.State {
-		case Follower:
-			<-time.After(node.electionTimeout)
+		select {
+		case <-node.leaderCh:
+			//do leader thing
+			node.State = Leader
+			fmt.Println("[+] Majority votes received. Becoming Leader.")
+
+			command := "x <- " + strconv.Itoa(node.termID)
+			node.sendHeartbeat([]Entries{{ID: node.termID, Msg: command}})
+		case <-node.heartBeatCh:
+			//stay at follower
+			node.State = Follower
+			fmt.Println("[+] Receive heartbeat from leader.")
+			node.printEntries()
+		case <-time.After(node.electionTimeout):
+			//change to candidate
 			node.State = Candidate
-		case Candidate:
 			node.BroadCastRequestVote()
-			time.Sleep(10 * time.Second)
-		case Leader:
-			fmt.Println("I am a leader")
-			time.Sleep(5 * time.Second)
 		}
 	}
 }
