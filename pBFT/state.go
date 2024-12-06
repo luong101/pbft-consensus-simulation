@@ -18,10 +18,10 @@ type replicaState struct {
 	// Sequence number of last execution.
 	lastExecuted uint
 
-	// // Keep track of seen requests. Map request to the digest.
-	// requests map[string]Request
-	// // Keep track of requests queued for execution. Could also be tracked via a single map.
-	// pending map[string]Request
+	// Keep track of seen requests. Map request to the digest.
+	requests map[string]Request
+	// Keep track of requests queued for execution. Could also be tracked via a single map.
+	pending map[string]Request
 
 	// Keep track of seen pre-prepare messages.
 	preprepares map[messageID]PrePrepare
@@ -41,9 +41,9 @@ func newState() replicaState {
 	state := replicaState{
 		sl: &sync.Mutex{},
 
-		activeView: true,
-		// requests:    make(map[string]Request),
-		// pending:     make(map[string]Request),
+		activeView:  true,
+		requests:    make(map[string]Request),
+		pending:     make(map[string]Request),
 		preprepares: make(map[messageID]PrePrepare),
 		prepares:    make(map[messageID]*prepareReceipts),
 		commits:     make(map[messageID]*commitReceipts),
