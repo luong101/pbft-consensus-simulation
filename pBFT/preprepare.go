@@ -8,11 +8,15 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
+type Request struct {
+	Payload string
+}
+
 type PrePrepare struct {
 	View           uint
 	SequenceNumber uint
-	Block          Block
-	// Request Request
+	// Block          Block
+	Request   Request
 	Digest    string // Block hash
 	Signature []byte // Need or not ?
 }
@@ -21,7 +25,7 @@ var ErrConflictingPreprepare = errors.New("conflicting pre-prepare")
 
 // Gửi preprepare đi
 // Replica chưa có
-func (r *Replica) sendPrePrepare(ctx context.Context, block Block) error {
+func (r *Replica) sendPrePrepare(ctx context.Context, req Request) error {
 	// Chỉ có primary node mới dc gửi
 	if !r.isPrimary() {
 		return nil
@@ -33,9 +37,9 @@ func (r *Replica) sendPrePrepare(ctx context.Context, block Block) error {
 	msg := PrePrepare{
 		View:           r.view,
 		SequenceNumber: sequence,
-		Block:          block,
-		// Request: req
-		Digest: getDigest(block),
+		// Block:          block,
+		Request: req,
+		Digest:  getDigest(req),
 	}
 
 	log := r.log.With().
@@ -87,7 +91,7 @@ func (r *Replica) processPrePrepare(ctx context.Context, replica peer.ID, msg Pr
 	log.Info().Msg("received pre-prepare message")
 
 	// Kiểm tra node gửi có phải là primary không
-	if replica != r.primaryReplicaID() {
+	if replica != r.primaryReplicaID() { // pbft.go
 		log.Error().Str("primary", r.primaryReplicaID().String()).Msg("pre-prepare came from a replica that is not the primary, dropping")
 		return nil
 	}
@@ -115,8 +119,8 @@ func (r *Replica) processPrePrepare(ctx context.Context, replica peer.ID, msg Pr
 	// Lưu block từ thông điệp PrePrepare
 	r.preprepares[id] = msg
 
-	r.blocks[msg.Digest] = msg.Block
-	r.peending[msg.Digest] = msg.Block
+	r.requests[msg.Digest] = msg.Request
+	r.pending[msg.Digest] = msg.Request
 
 	r.startRequestTimer(false)
 
