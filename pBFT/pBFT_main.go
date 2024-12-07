@@ -1,7 +1,9 @@
 package mainpBFT
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/blocklessnetwork/b7s/host" // Your host package
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -42,9 +44,29 @@ func MainpBFT() {
 	log.Info().Msg("Created 1 replicas successfully.")
 	defer replica.Shutdown()
 
-	// Start to run
+	// Start to run =========================
+
+	// Tạo file lưu blockchain
+	err = newBlockWithPrevBlockchain(replica.chainFile)
+	if err != nil {
+		fmt.Print("could not create file blockchain: %w", err)
+	}
+
+	// Tạo block mới
+	req := "hello"
+
+	// Tạo req
+	request := Request{
+		ID:        "1",
+		Timestamp: time.Now(),
+		Origin:    replica.id,
+		Execute:   req,
+	}
+
+	ctx := context.Background()
+
+	replica.processRequest(ctx, replica.id, request)
 	replica.setPBFTMessageHandler()
-	replica.
 }
 
 // package main
