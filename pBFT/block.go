@@ -3,8 +3,6 @@ package mainpBFT
 
 import (
 	"bufio"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"strconv"
@@ -17,14 +15,19 @@ type Block struct {
 	BlockHash         string
 }
 
-func generateHash(previousBlockHash string, blockHeight int) string {
-	data := fmt.Sprintf("%s%d", previousBlockHash, blockHeight)
-	hash := sha256.Sum256([]byte(data))
-	return hex.EncodeToString(hash[:])
-}
+// func generateHash(previousBlockHash string, blockHeight int) string {
+// 	data := fmt.Sprintf("%s%d", previousBlockHash, blockHeight)
+// 	hash := sha256.Sum256([]byte(data))
+// 	return hex.EncodeToString(hash[:])
+// }
 
-func NewBlock(previousBlockHash string, blockHeight int) Block {
-	blockHash := generateHash(previousBlockHash, blockHeight)
+// func hashDataToBlock(data string) string {
+// 	hash := sha256.Sum256([]byte(data))
+// 	return hex.EncodeToString(hash[:])
+// }
+
+func NewBlockWithPrevBlock(previousBlockHash string, blockHeight int, blockHash string) Block {
+	// blockHash := generateHash(previousBlockHash, blockHeight, data)
 	return Block{
 		PreviousBlockHash: previousBlockHash,
 		BlockHeight:       blockHeight,
@@ -37,7 +40,7 @@ type Blockchain struct {
 	// chainFile string
 }
 
-func newBlockchain(chainFile string) error {
+func newBlockWithPrevBlockchain(chainFile string) error {
 	// Check coi tập tin tồn tại chưa
 	_, err := os.Stat(chainFile)
 	if err == nil {
@@ -53,7 +56,7 @@ func newBlockchain(chainFile string) error {
 	defer f.Close()
 
 	// Add block genesis
-	genesisBlock := NewBlock("", 0)
+	genesisBlock := NewBlockWithPrevBlock("", 0, "")
 	if err := appendBlockToBlockchain(chainFile, genesisBlock); err != nil {
 		return fmt.Errorf("could not write genesis block: %w", err)
 	}

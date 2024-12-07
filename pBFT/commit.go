@@ -37,8 +37,8 @@ func (r *Replica) maybeSendCommit(ctx context.Context, view uint, sequenceNo uin
 	}
 	log.Info().Msg("request committed, executing")
 
-	// return r.execute(ctx, view, sequenceNo, digest) // File execute.go
-	return nil
+	return r.execute(ctx, view, sequenceNo, digest) // File execute.go
+	// return nil
 }
 
 // Quyết định xem có nên gửi Commit không
@@ -115,11 +115,11 @@ func (r *Replica) processCommit(ctx context.Context, replica peer.ID, commit Com
 	}
 
 	// Nếu Committed thì thực thi yêu cầu
-	// err := r.execute(ctx, commit.View, commit.SequenceNumber, commit.Digest)
-	// if err != nil {
-	// 	return fmt.Errorf("request execution failed: %w", err)
+	err := r.execute(ctx, commit.View, commit.SequenceNumber, commit.Digest)
+	if err != nil {
+		return fmt.Errorf("request execution failed: %w", err)
 
-	// }
+	}
 
 	return nil
 }
