@@ -55,6 +55,9 @@ type Replica struct {
 	// tracer và metrics
 	tracer  *tracing.Tracer
 	metrics *metrics.Metrics
+
+	// Mỗi Replica có 1 blockchain lưu trong đây
+	chainFile string
 }
 
 func NewReplica(log zerolog.Logger, host *host.Host, peers []peer.ID, clusterID string /*, options ...Option */) (*Replica, error) {
@@ -93,6 +96,8 @@ func NewReplica(log zerolog.Logger, host *host.Host, peers []peer.ID, clusterID 
 
 		tracer:  tracing.NewTracer(tracerName),
 		metrics: metrics.Default(),
+
+		chainFile: "chainFile_" + host.ID().String() + ".txt",
 	}
 	replica.log.Info().Strs("replicas", peerIDList(peers)).Uint("n", total).Uint("f", replica.f).Bool("byzantine", replica.byzantine).Msg("created PBFT replica")
 

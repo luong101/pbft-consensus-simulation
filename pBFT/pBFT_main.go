@@ -41,6 +41,8 @@ func MainpBFT() {
 	// Optionally start consensus logic or other operations here
 	log.Info().Msg("Created 1 replicas successfully.")
 	defer replica.Shutdown()
+
+	// Start to run
 	replica.setPBFTMessageHandler()
 	replica.
 }
