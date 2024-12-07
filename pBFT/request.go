@@ -27,7 +27,7 @@ func (r *Replica) processRequest(ctx context.Context, from peer.ID, req Request)
 
 	log.Info().Msg("received a request")
 
-	// Check if we've executed this before. If yes, just return the result.
+	// Check if we've executed this before. If yes, just return the result. // Coi có nên bỏ không
 	result, ok := r.executions[req.ID]
 	if ok {
 		log.Info().Msg("request already executed, sending result to client")
