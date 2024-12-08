@@ -356,7 +356,7 @@ func (node *Node) BroadCastRequestVote() {
 	peers := node.Host.Peerstore().Peers()
 	var votes int32 = 1 // Vote for self (use atomic for thread safety)
 
-	if len(node.Host.Peerstore().Peers()) < 3 {
+	if len(node.Host.Peerstore().Peers()) < 5 {
 		fmt.Println("[!] Insufficient peers to form a majority.")
 		return
 	}
