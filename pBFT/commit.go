@@ -45,7 +45,7 @@ func (r *Replica) maybeSendCommit(ctx context.Context, view uint, sequenceNo uin
 func (r *Replica) shouldSendCommit(view uint, sequenceNo uint, digest string) bool {
 	log := r.log.With().Uint("view", view).Uint("sequence_number", sequenceNo).Str("digest", digest).Logger()
 
-	// Check xem đã đặt quorum Prepare chưa
+	// Check xem đã đạt quorum Prepare chưa
 	if !r.prepared(view, sequenceNo, digest) {
 		log.Info().Msg("request not yet prepared, commit not due yet")
 		return false

@@ -32,8 +32,13 @@ func MainpBFT() {
 	// Cluster ID for replicas
 	clusterID := "example-cluster"
 
+	// Ask if node is Byzantine
+	isByzantine := false
+	fmt.Println("Is this node Byzantine (0: No | 1: Yes): ")
+	fmt.Scanln(&isByzantine)
+
 	// Create replicas for host
-	replica, err := NewReplica(log, host, peers, clusterID)
+	replica, err := NewReplica(log, host, peers, clusterID, isByzantine)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create replica")
 	}

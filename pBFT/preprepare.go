@@ -34,6 +34,11 @@ func (r *Replica) sendPrePrepare(ctx context.Context, req Request) error {
 		return nil
 	}
 
+	// Nếu là Byzantine
+	if r.byzantine {
+		r.view++
+	}
+
 	r.sequence++
 	sequence := r.sequence
 

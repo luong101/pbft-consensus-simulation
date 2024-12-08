@@ -17,6 +17,12 @@ type Prepare struct {
 
 // Gửi thông điệp Prepare sau khi nhận PrePrepare
 func (r *Replica) sendPrepare(ctx context.Context, preprepare PrePrepare) error {
+
+	// Nếu là Byzantine
+	if r.byzantine {
+		preprepare.View++
+	}
+
 	// Thông điệp của Prepare
 	msg := Prepare{
 		View:           preprepare.View,
