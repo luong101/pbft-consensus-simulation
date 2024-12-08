@@ -135,10 +135,12 @@ func (r *Replica) setPBFTMessageHandler() {
 			r.log.Info().Str("peer", from.String()).Msg("received message from a peer not in our cluster, discarding")
 			return
 		}
-
+		fmt.Println("stream:", stream)
 		buf := bufio.NewReader(stream)
-		msg, err := buf.ReadBytes('\n')
+		fmt.Printf("buf:", buf)
 
+		msg, err := buf.ReadBytes('\n')
+		fmt.Println("msg new line:", string(msg))
 		// Nếu có error mà không phải là EOF thì báo error
 		if err != nil && !errors.Is(err, io.EOF) {
 			stream.Reset()
@@ -150,7 +152,7 @@ func (r *Replica) setPBFTMessageHandler() {
 
 		err = r.processMessage(ctx, from, msg)
 		if err != nil {
-			r.log.Error().Err(err).Str("peer", from.String()).Msg("message processing failed")
+			r.log.Error().Err(err).Str("peer", from.String()).Msg("message processing failed lmao")
 		}
 	})
 

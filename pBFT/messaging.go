@@ -45,6 +45,7 @@ func (r *Replica) broadcast(ctx context.Context, msg any) error {
 
 	saveTraceContext(ctx, msg)
 
+	fmt.Print(msg)
 	// Serialize the message.
 	payload, err := json.Marshal(msg)
 	if err != nil {

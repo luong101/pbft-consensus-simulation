@@ -67,7 +67,7 @@ func (r *Replica) processRequest(ctx context.Context, from peer.ID, req Request)
 	r.pending[digest] = req
 
 	// Broadcast a pre-prepare message.
-	err = r.sendPrePrepare(ctx, req)
+	err := r.sendPrePrepare(ctx, req)
 	if err != nil {
 		return fmt.Errorf("could not broadcast pre-prepare message (request: %v): %w", req.ID, err)
 	}
