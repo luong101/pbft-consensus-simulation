@@ -2,6 +2,7 @@ package mainpBFT
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/libp2p/go-libp2p/core/peer"
 
@@ -63,6 +64,14 @@ func (m MessageType) String() string {
 // 	Execute   execute.Request `json:"execute"`
 // }
 
+type Request struct {
+	BaseMessage
+	ID        string    `json:"id"`
+	Timestamp time.Time `json:"timestamp"`
+	Origin    peer.ID   `json:"origin"`
+	Execute   string    `json:"execute"`
+}
+
 func (r Request) Type() MessageType {
 	return MessageRequest
 }
@@ -78,62 +87,72 @@ func (r Request) Type() MessageType {
 // 	Signature string `json:"signature,omitempty"`
 // }
 
+type PrePrepare struct {
+	BaseMessage
+	View           uint `json:"view"`
+	SequenceNumber uint `json:"sequence_number"`
+	// Block          Block
+	Request   Request `json:"request"`
+	Digest    string  `json:"digest"` // Block hash
+	Signature []byte  // Need or not ?
+}
+
 func (p PrePrepare) Type() MessageType {
 	return MessagePrePrepare
 }
 
-// type Prepare struct {
-// 	BaseMessage
-// 	View           uint   `json:"view"`
-// 	SequenceNumber uint   `json:"sequence_number"`
-// 	Digest         string `json:"digest"`
+type Prepare struct {
+	BaseMessage
+	View           uint   `json:"view"`
+	SequenceNumber uint   `json:"sequence_number"`
+	Digest         string `json:"digest"`
 
-// 	// Signed digest of the prepare message.
-// 	Signature string `json:"signature,omitempty"`
-// }
+	// Signed digest of the prepare message.
+	Signature string `json:"signature,omitempty"`
+}
 
 func (p Prepare) Type() MessageType {
 	return MessagePrepare
 }
 
-// type Commit struct {
-// 	BaseMessage
-// 	View           uint   `json:"view"`
-// 	SequenceNumber uint   `json:"sequence_number"`
-// 	Digest         string `json:"digest"`
+type Commit struct {
+	BaseMessage
+	View           uint   `json:"view"`
+	SequenceNumber uint   `json:"sequence_number"`
+	Digest         string `json:"digest"`
 
-// 	// Signed digest of the commit message.
-// 	Signature string `json:"signature,omitempty"`
-// }
+	// Signed digest of the commit message.
+	Signature string `json:"signature,omitempty"`
+}
 
 func (c Commit) Type() MessageType {
 	return MessageCommit
 }
 
-// type ViewChange struct {
-// 	BaseMessage
-// 	View     uint          `json:"view"`
-// 	Prepares []PrepareInfo `json:"prepares"`
+type ViewChange struct {
+	BaseMessage
+	View     uint          `json:"view"`
+	Prepares []PrepareInfo `json:"prepares"`
 
-// 	// Signed digest of the view change message.
-// 	Signature string `json:"signature,omitempty"`
+	// Signed digest of the view change message.
+	Signature string `json:"signature,omitempty"`
 
-// 	// Technically, view change message also includes:
-// 	//	- n - sequence number of the last stable checkpoint => not needed here since we don't support checkpoints
-// 	//  - C - 2f+1 checkpoint messages proving the correctness of s => see above
-// }
+	// Technically, view change message also includes:
+	//	- n - sequence number of the last stable checkpoint => not needed here since we don't support checkpoints
+	//  - C - 2f+1 checkpoint messages proving the correctness of s => see above
+}
 
 func (v ViewChange) Type() MessageType {
 	return MessageViewChange
 }
 
-// type PrepareInfo struct {
-// 	View           uint                `json:"view"`
-// 	SequenceNumber uint                `json:"sequence_number"`
-// 	Digest         string              `json:"digest"`
-// 	PrePrepare     PrePrepare          `json:"preprepare"`
-// 	Prepares       map[peer.ID]Prepare `json:"prepares"`
-// }
+type PrepareInfo struct {
+	View           uint                `json:"view"`
+	SequenceNumber uint                `json:"sequence_number"`
+	Digest         string              `json:"digest"`
+	PrePrepare     PrePrepare          `json:"preprepare"`
+	Prepares       map[peer.ID]Prepare `json:"prepares"`
+}
 
 type NewView struct {
 	BaseMessage

@@ -7,13 +7,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
-type Commit struct {
-	View           uint
-	SequenceNumber uint
-	Digest         string
-	Signature      string
-}
-
 // Xem xét xem node có cần gửi Commit message không
 func (r *Replica) maybeSendCommit(ctx context.Context, view uint, sequenceNo uint, digest string) error {
 	log := r.log.With().Uint("view", view).Uint("sequence_number", sequenceNo).Str("digest", digest).Logger()
@@ -25,9 +18,27 @@ func (r *Replica) maybeSendCommit(ctx context.Context, view uint, sequenceNo uin
 
 	// Broadcast Commit message
 	log.Info().Msg("request prepared, broadcasting commit")
+
+	for _, cur_host := range pbft_Host {
+		fmt.Println("\n==============ID=============:\n", cur_host.ID())
+
+		connectedPeers := cur_host.Network().Peers()
+		protocols, _ := cur_host.Peerstore().GetProtocols(cur_host.ID())
+		fmt.Println("Protocols supported by peer:", protocols)
+
+		if len(connectedPeers) == 0 {
+			fmt.Println("No peers connected.")
+		}
+		fmt.Println("Connected peers:")
+		for _, peerID := range connectedPeers {
+			fmt.Printf("- %s\n", peerID)
+		}
+	}
+	println("=========SEND COMMIT========")
+
 	err := r.sendCommit(ctx, view, sequenceNo, digest)
 	if err != nil {
-		return fmt.Errorf("could not send commit message: %w", err)
+		return fmt.Errorf("could not send commit message =======================abcda: %w", err)
 	}
 
 	// Kiểm tra xem đã đạt quorum Commit chưa

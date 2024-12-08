@@ -7,13 +7,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
-type Prepare struct {
-	View           uint
-	SequenceNumber uint
-	Digest         string // Block hash
-	Signature      string // Ký digest prepare mess
-	// Block          Block
-}
 
 // Gửi thông điệp Prepare sau khi nhận PrePrepare
 func (r *Replica) sendPrepare(ctx context.Context, preprepare PrePrepare) error {

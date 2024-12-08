@@ -130,7 +130,8 @@ func (r *Replica) setPBFTMessageHandler() {
 
 	r.host.Host.SetStreamHandler(r.protocolID, func(stream network.Stream) {
 		defer stream.Close()
-
+		fmt.Println("Received message!", r.id)
+		fmt.Println("===============Protocol:============", r.protocolID)
 		from := stream.Conn().RemotePeer()
 		// Chỉ nhận message từ replica cùng cluster
 		_, known := pm[from]
@@ -140,7 +141,7 @@ func (r *Replica) setPBFTMessageHandler() {
 		}
 		fmt.Println("stream:", stream)
 		buf := bufio.NewReader(stream)
-		fmt.Printf("buf:", buf)
+		// fmt.Printf("buf:", buf)
 
 		msg, err := buf.ReadBytes('\n')
 		fmt.Println("msg new line:", string(msg))
@@ -157,7 +158,21 @@ func (r *Replica) setPBFTMessageHandler() {
 		if err != nil {
 			r.log.Error().Err(err).Str("peer", from.String()).Msg("message processing failed lmao")
 		}
+
 	})
+	for _, cur_host := range pbft_Host {
+		fmt.Println("\n==============CHECK=============:\n", cur_host.ID())
+		fmt.Println("Protocol global:", Protocol)
+		fmt.Println("Protocol replica:", r.protocolID)
+		// protocol := "/b7s/consensus/pbft/1.0.0/cluster/example-cluster"
+		stream, err := cur_host.NewStream(context.Background(), cur_host.ID(), Protocol)
+		if err != nil {
+			fmt.Println("Failed to create stream: Peer does not support the GLOBAL protocol", err)
+		} else {
+			fmt.Println("Successfully created stream with the peer, GLOBAL protocol supported!")
+			stream.Close() // Always close the stream when done
+		}
+	}
 
 }
 
@@ -177,7 +192,7 @@ func (r *Replica) processMessage(ctx context.Context, from peer.ID, payload []by
 	// Xử lý payload
 	msg, err := unpackMessage(payload)
 	if err != nil {
-		return fmt.Errorf("could not unpack message: %w", err)
+		return fmt.Errorf("could not unpack message lmao2: %w", err)
 	}
 
 	ctx, span := r.tracer.Start(ctx, msgProcessSpanName(msg.Type()), trace.WithAttributes(b7ssemconv.MessagePeer.String(from.String())))

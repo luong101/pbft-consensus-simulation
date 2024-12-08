@@ -16,7 +16,7 @@ const (
 	MinimumReplicaCount = 4
 
 	// How long do the send/broadcast operation have until we consider it failed.
-	NetworkTimeout = 5 * time.Second
+	NetworkTimeout = 500 * time.Second
 
 	// How long is the inactivity period before we trigger a view change.
 	RequestTimeout = 10 * time.Second

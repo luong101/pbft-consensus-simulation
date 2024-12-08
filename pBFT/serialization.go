@@ -236,7 +236,7 @@ func (n *NewView) UnmarshalJSON(data []byte) error {
 func unpackMessage(payload []byte) (PBFTMessage, error) {
 
 	var msg messageEnvelope
-	fmt.Println("payload:", payload)
+	fmt.Println("payload:", string(payload))
 	fmt.Println(msg)
 	err := json.Unmarshal(payload, &msg)
 	if err != nil {

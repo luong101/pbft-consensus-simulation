@@ -3,27 +3,10 @@ package mainpBFT
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
-type Request struct {
-	BaseMessage
-	ID        string    `json:"id"`
-	Timestamp time.Time `json:"timestamp"`
-	Origin    peer.ID   `json:"origin"`
-	Execute   string    `json:"execute"`
-}
-
-type PrePrepare struct {
-	View           uint
-	SequenceNumber uint
-	// Block          Block
-	Request   Request
-	Digest    string // Block hash
-	Signature []byte // Need or not ?
-}
 
 //var ErrConflictingPreprepare = errors.New("conflicting pre-prepare")
 

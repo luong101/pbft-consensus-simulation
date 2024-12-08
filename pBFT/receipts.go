@@ -42,25 +42,25 @@ func newCommitReceipts() *commitReceipts {
 
 // Ánh xạ từ node ID (peer.ID) tới View change
 
-type PrepareInfo struct {
-	View           uint                `json:"view"`
-	SequenceNumber uint                `json:"sequence_number"`
-	Digest         string              `json:"digest"`
-	PrePrepare     PrePrepare          `json:"preprepare"`
-	Prepares       map[peer.ID]Prepare `json:"prepares"`
-}
+// type PrepareInfo struct {
+// 	View           uint                `json:"view"`
+// 	SequenceNumber uint                `json:"sequence_number"`
+// 	Digest         string              `json:"digest"`
+// 	PrePrepare     PrePrepare          `json:"preprepare"`
+// 	Prepares       map[peer.ID]Prepare `json:"prepares"`
+// }
 
-type ViewChange struct {
-	View     uint          
-	Prepares []PrepareInfo 
+// type ViewChange struct {
+// 	View     uint
+// 	Prepares []PrepareInfo
 
-	// Signed digest of the view change message.
-	Signature string 
+// 	// Signed digest of the view change message.
+// 	Signature string
 
-	// Technically, view change message also includes:
-	//	- n - sequence number of the last stable checkpoint => not needed here since we don't support checkpoints
-	//  - C - 2f+1 checkpoint messages proving the correctness of s => see above
-}
+// 	// Technically, view change message also includes:
+// 	//	- n - sequence number of the last stable checkpoint => not needed here since we don't support checkpoints
+// 	//  - C - 2f+1 checkpoint messages proving the correctness of s => see above
+// }
 
 type viewChangeReceipts struct {
 	m map[peer.ID]ViewChange
