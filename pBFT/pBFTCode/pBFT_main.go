@@ -100,14 +100,14 @@ func MainpBFT() {
 	}
 	// return replicas, request
 
-	for i := 0; i < 4; i++ {
+	for i := 0; i < replica_num; i++ {
 		ctx := context.Background()
 		request.Origin = replicas[i].id
 		replicas[i].processRequest(ctx, replicas[i].id, request)
 	}
 
 	// Close Host
-	for i := 0; i < 4; i++ {
+	for i := 0; i < replica_num; i++ {
 		defer replicas[i].Shutdown()
 		defer pbft_Host[i].Close()
 	}
