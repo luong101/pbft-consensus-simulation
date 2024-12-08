@@ -15,17 +15,6 @@ type Block struct {
 	BlockHash         string
 }
 
-// func generateHash(previousBlockHash string, blockHeight int) string {
-// 	data := fmt.Sprintf("%s%d", previousBlockHash, blockHeight)
-// 	hash := sha256.Sum256([]byte(data))
-// 	return hex.EncodeToString(hash[:])
-// }
-
-// func hashDataToBlock(data string) string {
-// 	hash := sha256.Sum256([]byte(data))
-// 	return hex.EncodeToString(hash[:])
-// }
-
 func NewBlockWithPrevBlock(previousBlockHash string, blockHeight int, blockHash string) Block {
 	// blockHash := generateHash(previousBlockHash, blockHeight, data)
 	return Block{
@@ -37,7 +26,6 @@ func NewBlockWithPrevBlock(previousBlockHash string, blockHeight int, blockHash 
 
 type Blockchain struct {
 	Chain []Block
-	// chainFile string
 }
 
 func newBlockWithPrevBlockchain(chainFile string) error {

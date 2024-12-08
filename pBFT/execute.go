@@ -5,40 +5,6 @@ import (
 	"fmt"
 )
 
-// import (
-// 	"context"
-// 	"fmt"
-
-// 	"github.com/armon/go-metrics"
-
-// 	"github.com/blocklessnetwork/b7s/models/blockless"
-// 	"github.com/blocklessnetwork/b7s/models/execute"
-// 	"github.com/blocklessnetwork/b7s/models/response"
-// )
-
-// // Execute fullfils the consensus interface by inserting the request into the pipeline.
-// // func (r *Replica) Execute(client peer.ID, requestID string, timestamp time.Time, req execute.Request) (codes.Code, execute.Result, error) {
-
-// // 	// Modifying state, so acquire state lock now.
-// // 	r.sl.Lock()
-// // 	defer r.sl.Unlock()
-
-// // 	request := Request{
-// // 		ID:        requestID,
-// // 		Timestamp: timestamp,
-// // 		Origin:    client,
-// // 		Execute:   req,
-// // 	}
-
-// // 	err := r.processRequest(tracing.TraceContext(context.Background(), r.cfg.TraceInfo), client, request)
-// // 	if err != nil {
-// // 		return codes.Error, execute.Result{}, fmt.Errorf("could not process request: %w", err)
-// // 	}
-
-// // 	// Nothing to return at this point.
-// // 	return codes.NoContent, execute.Result{}, nil
-// // }
-
 // Execute add block
 func exeAddBlock(chainFile string, digest string) error {
 	blocks, err := loadBlockchainFromFile(chainFile)
@@ -105,11 +71,6 @@ func (r *Replica) execute(ctx context.Context, view uint, sequence uint, digest 
 		log.Error().Err(err).Msg("execution add block failed")
 	}
 
-	// res, err := r.executor.ExecuteFunction(ctx, request.ID, request.Execute)
-	// if err != nil {
-	// 	log.Error().Err(err).Msg("execution failed")
-	// }
-
 	// Stop the timer since we completed an execution.
 	r.stopRequestTimer()
 
@@ -120,49 +81,7 @@ func (r *Replica) execute(ctx context.Context, view uint, sequence uint, digest 
 
 	log.Info().Msg("executed request")
 
-	// r.lastExecuted = sequence
-
-	// metadata, err := r.cfg.MetadataProvider.Metadata(request.Execute, res.Result)
-	// if err != nil {
-	// 	log.Warn().Err(err).Msg("could not get metadata")
-	// }
-
-	// nres := execute.NodeResult{
-	// 	Result:   res,
-	// 	Metadata: metadata,
-	// 	PBFT: execute.PBFTResultInfo{
-	// 		View:             r.view,
-	// 		RequestTimestamp: request.Timestamp,
-	// 		Replica:          r.id,
-	// 	},
-	// }
-
-	// // err = nres.Sign(r.host.PrivateKey())
-	// // if err != nil {
-	// // 	return fmt.Errorf("could not sign execution result: %w", err)
-	// // }
-
-	// msg := response.Execute{
-	// 	BaseMessage: blockless.BaseMessage{TraceInfo: r.cfg.TraceInfo},
-	// 	Code:        res.Code,
-	// 	RequestID:   request.ID,
-	// 	Results:     execute.ResultMap{r.id: nres},
-	// }
-
-	// // Save this executions in case it's requested again.
-	// r.executions[request.ID] = msg
-
-	// // Invoke specified post processor functions.
-	// for _, proc := range r.cfg.PostProcessors {
-	// 	proc(request.ID, request.Origin, request.Execute, nres)
-	// }
-
-	// err = r.send(ctx, request.Origin, &msg, blockless.ProtocolID)
-	// if err != nil {
-	// 	return fmt.Errorf("could not send execution response to node (target: %s, request: %s): %w", request.Origin.String(), request.ID, err)
-	// }
-
-	// r.metrics.MeasureSinceWithLabels(pbftExecutionsTimeMetric, request.Timestamp, []metrics.Label{{Name: "function", Value: request.Execute.FunctionID}})
+	fmt.Println(ctx)
 
 	return nil
 }

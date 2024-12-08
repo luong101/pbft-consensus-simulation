@@ -7,11 +7,11 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
-
 //var ErrConflictingPreprepare = errors.New("conflicting pre-prepare")
 
 // Gửi preprepare đi
 func (r *Replica) sendPrePrepare(ctx context.Context, req Request) error {
+
 	// Chỉ có primary node mới dc gửi
 	if !r.IsPrimary() {
 		return nil

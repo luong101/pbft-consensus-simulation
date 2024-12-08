@@ -15,11 +15,11 @@ func connectAllHost(pbft_Host []*host.Host) {
 				target_addr := fmt.Sprintf("%s/p2p/%s", target.Addrs()[0], target.ID())
 				target_info, err := peer.AddrInfoFromString(target_addr)
 				if err != nil {
-					fmt.Printf("Failed to convert", err)
+					fmt.Println("Failed to convert", err)
 				}
 				err = cur_host.Connect(context.Background(), *target_info)
 				if err != nil {
-					fmt.Printf("Failed to connect", err)
+					fmt.Println("Failed to connect", err)
 				}
 			}
 		}

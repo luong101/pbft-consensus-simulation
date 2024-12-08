@@ -40,26 +40,6 @@ func (c pbftCore) currentPrimary() uint {
 	return c.view % c.n
 }
 
-// // TÌM TRÊN ID NHỎ NHẤT
-// func (c pbftCore) primaryNode() peer.ID {
-// 	// Sao chép danh sách nodes để không làm thay đổi danh sách gốc.
-
-// 	nodesCopy := make([]peer.ID, len(c.nodes))
-// 	copy(nodesCopy, c.nodes)
-
-// 	// Sắp xếp theo thứ tự tăng dần.
-// 	sort.Slice(nodesCopy, func(i, j int) bool {
-// 		return nodesCopy[i] < nodesCopy[j]
-// 	})
-
-// 	// Node đầu tiên trong danh sách sắp xếp là node chính.
-// 	return nodesCopy[0]
-// }
-
-// func (c pbftCore) currentPrimaryNode() peer.ID {
-// 	return c.primaryNode()
-// }
-
 // Số lượng Prepare cần thiết để đồng thuận
 func (c pbftCore) prepareQuorum() uint {
 	return 2 * c.f

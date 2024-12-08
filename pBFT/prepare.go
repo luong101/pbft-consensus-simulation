@@ -7,7 +7,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
-
 // Gửi thông điệp Prepare sau khi nhận PrePrepare
 func (r *Replica) sendPrepare(ctx context.Context, preprepare PrePrepare) error {
 
@@ -69,7 +68,7 @@ func (r *Replica) recordPrepareReceipt(replica peer.ID, prepare Prepare) {
 		return
 	}
 
-	prepares.m[replica] = prepare // file state.go
+	prepares.m[replica] = prepare
 }
 
 // Xử lý Prepare message từ các bản sao và xác minh tính hợp lệ

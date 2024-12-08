@@ -13,7 +13,19 @@ import (
 
 var pbft_Host []*host.Host
 
+func STTHost(r *Replica, id peer.ID) uint {
+	list := peerIDList(r.peers)
+	var i uint
+	for i = 0; i < 4; i++ {
+		if list[i] == id.String() {
+			return i
+		}
+	}
+	return 100
+}
+
 func MainpBFT() {
+
 	// Logger for debugging
 	replica_num := 4
 
@@ -22,9 +34,6 @@ func MainpBFT() {
 	// Example address and port for the hosts
 	address := "127.0.0.1"
 	port := uint(8000)
-
-	// Create Host
-	// pbft_Host := []*host.Host{}
 
 	// List of peers (host IDs)
 	peers := []peer.ID{}
@@ -65,13 +74,10 @@ func MainpBFT() {
 		replicas = append(replicas, replica)
 
 		// Tạo file lưu Blockchain
-		// err = newBlockWithPrevBlockchain(replica.chainFile)
-		// if err != nil {
-		// 	fmt.Printf("Cannot create chain file from Replica %s", err)
-		// }
-
-		// Nhớ shutdown
-		// defer replica.Shutdown()
+		err = newBlockWithPrevBlockchain(replica.chainFile)
+		if err != nil {
+			fmt.Printf("Cannot create chain file from Replica %s", err)
+		}
 	}
 
 	//Output the replica IDs
@@ -83,38 +89,28 @@ func MainpBFT() {
 	}
 
 	connectAllHost(pbft_Host)
-	// replicas[0].broadcast(context.Background(), "hello\n")
-
-	// // Optionally start consensus logic or other operations here
-	// connectAllHost(pbft_Host)
-	// log.Info().Msg("Created 4 replicas successfully.")
-	// for _, addr := range replica1.host.Addrs() {
-	// 	fmt.Printf("Host Multiaddress: %s/p2p/%s\n", addr, replica1.host.ID())
-	// }
-	// connectAllHost(pbft_Host)
-
-	// defer replica1.Shutdown()
-
-	// replica1.broadcast(context.Background(), "hello")
 
 	// Gửi Req
-	// Tạo block mới
 	req := "hello"
 	// Tạo req
+	request := Request{
+		ID:        "1",
+		Timestamp: time.Now(),
+		Execute:   req,
+	}
+	// return replicas, request
+
 	for i := 0; i < 4; i++ {
-		request := Request{
-			ID:        "1",
-			Timestamp: time.Now(),
-			Origin:    replicas[i].id,
-			Execute:   req,
-		}
 		ctx := context.Background()
+		request.Origin = replicas[i].id
 		replicas[i].processRequest(ctx, replicas[i].id, request)
 	}
 
 	// Close Host
 	for i := 0; i < 4; i++ {
-		replicas[i].Shutdown()
-		pbft_Host[i].Close()
+		defer replicas[i].Shutdown()
+		defer pbft_Host[i].Close()
 	}
+	select {}
+
 }

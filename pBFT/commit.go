@@ -19,26 +19,9 @@ func (r *Replica) maybeSendCommit(ctx context.Context, view uint, sequenceNo uin
 	// Broadcast Commit message
 	log.Info().Msg("request prepared, broadcasting commit")
 
-	for _, cur_host := range pbft_Host {
-		fmt.Println("\n==============ID=============:\n", cur_host.ID())
-
-		connectedPeers := cur_host.Network().Peers()
-		protocols, _ := cur_host.Peerstore().GetProtocols(cur_host.ID())
-		fmt.Println("Protocols supported by peer:", protocols)
-
-		if len(connectedPeers) == 0 {
-			fmt.Println("No peers connected.")
-		}
-		fmt.Println("Connected peers:")
-		for _, peerID := range connectedPeers {
-			fmt.Printf("- %s\n", peerID)
-		}
-	}
-	println("=========SEND COMMIT========")
-
 	err := r.sendCommit(ctx, view, sequenceNo, digest)
 	if err != nil {
-		return fmt.Errorf("could not send commit message =======================abcda: %w", err)
+		return fmt.Errorf("could not send commit message %w", err)
 	}
 
 	// Kiểm tra xem đã đạt quorum Commit chưa
@@ -48,7 +31,7 @@ func (r *Replica) maybeSendCommit(ctx context.Context, view uint, sequenceNo uin
 	}
 	log.Info().Msg("request committed, executing")
 
-	return r.execute(ctx, view, sequenceNo, digest) // File execute.go
+	return r.execute(ctx, view, sequenceNo, digest)
 	// return nil
 }
 

@@ -20,7 +20,6 @@ import (
 
 	"github.com/blocklessnetwork/b7s/consensus"
 	"github.com/blocklessnetwork/b7s/host"
-	"github.com/blocklessnetwork/b7s/models/blockless"
 	"github.com/blocklessnetwork/b7s/telemetry/b7ssemconv"
 	"github.com/blocklessnetwork/b7s/telemetry/tracing"
 )
@@ -37,9 +36,9 @@ type Replica struct {
 	requestTimer *time.Timer
 
 	// Giao tiếp
-	log      zerolog.Logger
-	host     *host.Host
-	executor blockless.Executor
+	log  zerolog.Logger
+	host *host.Host
+	// executor blockless.Executor
 
 	// Thông tin của Replica
 	id         peer.ID
@@ -68,11 +67,6 @@ func NewReplica(log zerolog.Logger, host *host.Host, peers []peer.ID, clusterID 
 	}
 
 	cfg := DefaultConfig
-
-	// Thiết lập các thay đổi cho config
-	// for _, option := range options {
-	// 	option(&cfg)
-	// }
 
 	// Tạo instance
 	replica := Replica{
@@ -130,8 +124,6 @@ func (r *Replica) setPBFTMessageHandler() {
 
 	r.host.Host.SetStreamHandler(r.protocolID, func(stream network.Stream) {
 		defer stream.Close()
-		fmt.Println("Received message!", r.id)
-		fmt.Println("===============Protocol:============", r.protocolID)
 		from := stream.Conn().RemotePeer()
 		// Chỉ nhận message từ replica cùng cluster
 		_, known := pm[from]
@@ -139,12 +131,12 @@ func (r *Replica) setPBFTMessageHandler() {
 			r.log.Info().Str("peer", from.String()).Msg("received message from a peer not in our cluster, discarding")
 			return
 		}
-		fmt.Println("stream:", stream)
+
 		buf := bufio.NewReader(stream)
 		// fmt.Printf("buf:", buf)
 
 		msg, err := buf.ReadBytes('\n')
-		fmt.Println("msg new line:", string(msg))
+
 		// Nếu có error mà không phải là EOF thì báo error
 		if err != nil && !errors.Is(err, io.EOF) {
 			stream.Reset()
@@ -156,23 +148,10 @@ func (r *Replica) setPBFTMessageHandler() {
 
 		err = r.processMessage(ctx, from, msg)
 		if err != nil {
-			r.log.Error().Err(err).Str("peer", from.String()).Msg("message processing failed lmao")
+			r.log.Error().Err(err).Str("peer", from.String()).Msg("message processing failed")
 		}
 
 	})
-	for _, cur_host := range pbft_Host {
-		fmt.Println("\n==============CHECK=============:\n", cur_host.ID())
-		fmt.Println("Protocol global:", Protocol)
-		fmt.Println("Protocol replica:", r.protocolID)
-		// protocol := "/b7s/consensus/pbft/1.0.0/cluster/example-cluster"
-		stream, err := cur_host.NewStream(context.Background(), cur_host.ID(), Protocol)
-		if err != nil {
-			fmt.Println("Failed to create stream: Peer does not support the GLOBAL protocol", err)
-		} else {
-			fmt.Println("Successfully created stream with the peer, GLOBAL protocol supported!")
-			stream.Close() // Always close the stream when done
-		}
-	}
 
 }
 
@@ -192,7 +171,7 @@ func (r *Replica) processMessage(ctx context.Context, from peer.ID, payload []by
 	// Xử lý payload
 	msg, err := unpackMessage(payload)
 	if err != nil {
-		return fmt.Errorf("could not unpack message lmao2: %w", err)
+		return fmt.Errorf("could not unpack message: %w", err)
 	}
 
 	ctx, span := r.tracer.Start(ctx, msgProcessSpanName(msg.Type()), trace.WithAttributes(b7ssemconv.MessagePeer.String(from.String())))
@@ -211,11 +190,6 @@ func (r *Replica) processMessage(ctx context.Context, from peer.ID, payload []by
 
 		span.SetStatus(otelcodes.Error, spanStatusErr)
 	}()
-
-	// Access to individual segments (pre-prepares, prepares, commits etc) could be managed on an individual level,
-	// but it's probably not worth it. This way we just do it request by request.
-	// NOTE: Perhaps lock as early as possible or force serialization. For some things we want to force in-order processing of messages,
-	// e.g. `new-view` first, THEN any `preprepares` for that view.
 
 	// Khóa sl lại để không cho nhiều replica cùng thay đổi một field
 	r.sl.Lock()
@@ -295,8 +269,6 @@ func (r *Replica) isMessageAllowed(msg interface{}) error {
 }
 
 // Loại bỏ preprepares, prepares, commist cũ(view nhỏ hơn thresholdView) và pending requests
-// Call this before updating the list of pending requests since for those we don't know
-// in which view they were scheduled - we remove all of them.
 func (r *Replica) cleanupState(thresholdView uint) {
 
 	r.log.Debug().Uint("threshold_view", thresholdView).Msg("cleaning up replica state")
@@ -327,15 +299,3 @@ func (r *Replica) cleanupState(thresholdView uint) {
 		}
 	}
 }
-
-// Replica hiện tại có phải malicious
-// func isByzantine() bool {
-// 	env := strings.ToLower(os.Getenv(EnvVarByzantine))
-
-// 	switch env {
-// 	case "y", "yes", "true", "1":
-// 		return true
-// 	default:
-// 		return false
-// 	}
-// }
