@@ -23,7 +23,7 @@ func (dh *DiscoverHandler) HandlePeerFound(pi peer.AddrInfo) {
 		fmt.Printf("Failed to connect to peer %s: %v\n", pi.ID, err)
 		return
 	}
-	
+
 	// Send a Hello message
 	// dh.Node.SendHello(pi.ID)
 	dh.Node.Host.Peerstore().AddAddrs(pi.ID, pi.Addrs, math.MaxInt64)
