@@ -155,7 +155,7 @@ func (node *Node) RegisterServices() error {
 
 func (rft *RaftService) RequestVote(ctx context.Context, request *RequestVoteReq, reply *RequestVoteReply) error {
 	node := rft.node
-	node.NumberOfNode = request.NumberOfNode
+
 	// Reject request if the term is outdated
 	if request.TermID <= node.termID {
 		reply.TermID = node.termID
@@ -357,11 +357,11 @@ func (node *Node) BroadCastRequestVote() {
 	peers := node.Host.Peerstore().Peers()
 	var votes int32 = 1 // Vote for self (use atomic for thread safety)
 
-	if len(node.Host.Peerstore().Peers()) < 5 && node.NumberOfNode == 0 {
+	if len(peers) < 3 {
 		fmt.Println("[!] Insufficient peers to form a majority.")
+		os.Exit(1)
 		return
 	}
-	node.NumberOfNode = 1
 	node.termID++                                // Increment term before election
 	node.votedFor = node.Host.ID().ShortString() // Vote for self
 
@@ -399,7 +399,6 @@ func (node *Node) BroadCastRequestVote() {
 				CandidateID:  node.Host.ID(),
 				LastLogIndex: LastLogIndex,
 				LastLogTerm:  LastLogTerm,
-				NumberOfNode: node.NumberOfNode,
 			}, &reply)
 
 			if err != nil {
@@ -435,7 +434,20 @@ func (node *Node) BroadCastRequestVote() {
 
 }
 
+func (node *Node) WaitForPeers(min int) {
+	fmt.Println("[*] Waiting for at least", min, "peers to start...")
+	for {
+		peers := node.Host.Peerstore().Peers()
+		if len(peers) >= min {
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
+	fmt.Println("Start...")
+}
+
 func (node *Node) Start() {
+	node.WaitForPeers(5)
 	for {
 		select {
 		case <-node.leaderCh:
