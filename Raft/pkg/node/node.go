@@ -2,8 +2,10 @@ package node
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
+	"os"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -38,6 +40,7 @@ type RequestVoteReq struct {
 	CandidateID  peer.ID
 	LastLogIndex int
 	LastLogTerm  int
+	NumberOfNode int
 }
 
 type RequestVoteReply struct {
@@ -46,8 +49,8 @@ type RequestVoteReply struct {
 }
 
 type Entries struct {
-	ID  int
-	Msg string
+	ID  int    `json:"id"`
+	Msg string `json:"msg"`
 }
 type AppendEntriesReq struct {
 	TermID       int
@@ -79,6 +82,34 @@ type Node struct {
 	NumberOfNode int
 	RPCServer    *rpc.Server
 	RPCClient    *rpc.Client
+}
+
+// Function to save committed logs to a JSON file
+func saveLogsToJSON(logs []Entries, filename string) error {
+
+	directory := ".\\commitedLog\\"
+	path := directory + filename + ".json"
+
+	// Ensure the directory exists
+	if _, err := os.Stat(directory); os.IsNotExist(err) {
+		err := os.MkdirAll(directory, 0755)
+		if err != nil {
+			return fmt.Errorf("failed to create directory: %w", err)
+		}
+	}
+
+	data, err := json.MarshalIndent(logs, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal logs to JSON: %w", err)
+	}
+
+	// Write JSON data to a file
+	err = os.WriteFile(path, data, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write entries to file: %w", err)
+	}
+
+	return nil
 }
 
 // NewNode creates and initializes a Node with a libp2p host, RPC server, and RPC client
@@ -124,7 +155,7 @@ func (node *Node) RegisterServices() error {
 
 func (rft *RaftService) RequestVote(ctx context.Context, request *RequestVoteReq, reply *RequestVoteReply) error {
 	node := rft.node
-
+	node.NumberOfNode = request.NumberOfNode
 	// Reject request if the term is outdated
 	if request.TermID <= node.termID {
 		reply.TermID = node.termID
@@ -194,8 +225,15 @@ func (rscv *RaftService) AppendEntriesRPC(ctx context.Context, req *AppendEntrie
 		node.lastLogTerm = node.log[node.lastLogIndex].ID
 	}
 
-	if req.LeaderCommit > node.lastLogIndex {
+	if req.LeaderCommit > node.commitIndex {
 		node.commitIndex = min(req.LeaderCommit, len(node.log)-1)
+		err := saveLogsToJSON(node.log, node.Host.ID().String())
+		if err != nil {
+			fmt.Println("Error saving logs:", err)
+		} else {
+			fmt.Println("Logs saved successfully to", node.Host.ID().ShortString())
+		}
+
 	}
 
 	node.State = Follower
@@ -206,7 +244,6 @@ func (rscv *RaftService) AppendEntriesRPC(ctx context.Context, req *AppendEntrie
 func (node *Node) sendHeartbeat(entries []Entries) {
 	PrevLogIndex := 0
 	PrevLogTerm := 0
-
 	if len(entries) != 0 {
 		if len(node.log) != 0 {
 			PrevLogIndex = len(node.log) - 1
@@ -220,6 +257,10 @@ func (node *Node) sendHeartbeat(entries []Entries) {
 	}
 
 	for {
+		if len(node.Host.Peerstore().Peers()) < 3 {
+			os.Exit(1)
+		}
+		var countCommitedEntry int32 = 1
 		// Ensure the node is still the leader
 		if node.State != Leader {
 			fmt.Println("[*] Node is no longer leader, stopping heartbeats.")
@@ -227,16 +268,22 @@ func (node *Node) sendHeartbeat(entries []Entries) {
 		}
 
 		fmt.Println("sendHeartbeat: Sending heartbeats to all peers...")
-
 		peers := node.Host.Peerstore().Peers()
+
+		var wg sync.WaitGroup
+		var mu sync.Mutex // Protects access to shared resources
+		responsivePeers := make([]peer.ID, 0)
+
 		for _, p := range peers {
 			// Skip self
 			if p == node.Host.ID() {
 				continue
 			}
 
+			wg.Add(1)
 			// Launch a goroutine for each peer
 			go func(peerID peer.ID) {
+				defer wg.Done()
 				// Create a timeout context for the heartbeat
 				ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 				defer cancel()
@@ -255,12 +302,30 @@ func (node *Node) sendHeartbeat(entries []Entries) {
 				if err != nil {
 					fmt.Println("[!] Failed to send heartbeat to", peerID.ShortString(), ":", err)
 					node.removeUnresponsiveNode(peerID)
+
 				} else {
 					fmt.Println("Heartbeat sent to", peerID.ShortString())
-
 				}
 
+				mu.Lock()
+				if reply.Success {
+					atomic.AddInt32(&countCommitedEntry, 1)
+				}
+				responsivePeers = append(responsivePeers, peerID)
+				mu.Unlock()
+
 			}(p)
+		}
+
+		wg.Wait()
+		if countCommitedEntry > int32((len(responsivePeers)+1)/2) && node.commitIndex != len(node.log)-1 {
+			node.commitIndex = len(node.log) - 1
+			err := saveLogsToJSON(node.log, node.Host.ID().String())
+			if err != nil {
+				fmt.Println("Error saving logs:", err)
+			} else {
+				fmt.Println("Logs saved successfully to", node.Host.ID().ShortString())
+			}
 		}
 
 		time.Sleep(5000 * time.Millisecond) // Periodic heartbeat
@@ -292,11 +357,11 @@ func (node *Node) BroadCastRequestVote() {
 	peers := node.Host.Peerstore().Peers()
 	var votes int32 = 1 // Vote for self (use atomic for thread safety)
 
-	if len(peers) < 3 {
+	if len(node.Host.Peerstore().Peers()) < 5 && node.NumberOfNode == 0 {
 		fmt.Println("[!] Insufficient peers to form a majority.")
 		return
 	}
-
+	node.NumberOfNode = 1
 	node.termID++                                // Increment term before election
 	node.votedFor = node.Host.ID().ShortString() // Vote for self
 
@@ -334,6 +399,7 @@ func (node *Node) BroadCastRequestVote() {
 				CandidateID:  node.Host.ID(),
 				LastLogIndex: LastLogIndex,
 				LastLogTerm:  LastLogTerm,
+				NumberOfNode: node.NumberOfNode,
 			}, &reply)
 
 			if err != nil {
@@ -342,6 +408,9 @@ func (node *Node) BroadCastRequestVote() {
 				return
 			}
 
+			if (node.Host.Peerstore().Peers().Len()) < 3 {
+				os.Exit(1)
+			}
 			// Process the response
 			mu.Lock()
 			if reply.VoteGranted {
@@ -374,11 +443,12 @@ func (node *Node) Start() {
 			node.State = Leader
 			fmt.Println("[+] Majority votes received. Becoming Leader.")
 
-			command := "x <- " + strconv.Itoa(node.termID)
+			command := "x = " + strconv.Itoa(node.termID)
 			node.sendHeartbeat([]Entries{{ID: node.termID, Msg: command}})
 		case <-node.heartBeatCh:
 			//stay at follower
 			node.State = Follower
+
 			fmt.Println("[+] Receive heartbeat from leader.")
 			node.printEntries()
 		case <-time.After(node.electionTimeout):

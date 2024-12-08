@@ -5,9 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log"
-
 	"math"
-
 
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
@@ -35,13 +33,14 @@ func (dh *DiscoverHandler) HandlePeerFound(pi peer.AddrInfo) {
 
 func main() {
 	// Create a new Node
+
 	node, err := node.NewNode()
 	if err != nil {
 		log.Fatalf("Failed to create node: %v", err)
 	}
 	defer node.Host.Close()
 
-	fmt.Printf("Node created. ID: %s \n", node.Host.ID().ShortString())
+	fmt.Printf("Node created. ID: %s, Addresses: %v\n", node.Host.ID(), node.Host.Addrs())
 
 	// Register RPC services
 	err = node.RegisterServices()
@@ -59,9 +58,6 @@ func main() {
 
 	fmt.Println("[mDNS] Service started, waiting for peers...")
 
-	peers := node.Host.Peerstore().Peers()
-	fmt.Printf("=== Số lượng node: %d\n", len(peers))
 	// Keep the program running
-
 	select {}
 }
