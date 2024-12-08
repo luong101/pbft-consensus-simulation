@@ -1,5 +1,5 @@
-// package main
-package mainpBFT
+// package pbft
+package pbft
 
 import (
 	"bufio"

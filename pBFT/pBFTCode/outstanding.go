@@ -1,4 +1,4 @@
-package mainpBFT
+package pbft
 
 // outstandingRequests returns the list of requests that have been seen by the replica, but are not already in the pipeline.
 // This is called on view change to check if replicas should re-start their view change timers to keep the new primary honest.

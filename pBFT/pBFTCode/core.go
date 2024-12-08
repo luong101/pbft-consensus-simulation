@@ -1,4 +1,4 @@
-package mainpBFT
+package pbft
 
 type pbftCore struct {
 	n        uint // Số Replica

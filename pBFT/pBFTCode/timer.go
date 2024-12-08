@@ -1,4 +1,4 @@
-package mainpBFT
+package pbft
 
 import (
 	"time"

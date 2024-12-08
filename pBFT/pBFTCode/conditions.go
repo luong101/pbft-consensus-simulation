@@ -1,4 +1,4 @@
-package mainpBFT
+package pbft
 
 func (r *Replica) prePrepared(view uint, sequenceNo uint, digest string) bool {
 
