@@ -37,15 +37,15 @@ func (r *Replica) maybeSendCommit(ctx context.Context, view uint, sequenceNo uin
 	}
 	log.Info().Msg("request committed, executing")
 
-	// return r.execute(ctx, view, sequenceNo, digest) // File execute.go
-	return nil
+	return r.execute(ctx, view, sequenceNo, digest) // File execute.go
+	// return nil
 }
 
 // Quyết định xem có nên gửi Commit không
 func (r *Replica) shouldSendCommit(view uint, sequenceNo uint, digest string) bool {
 	log := r.log.With().Uint("view", view).Uint("sequence_number", sequenceNo).Str("digest", digest).Logger()
 
-	// Check xem đã đặt quorum Prepare chưa
+	// Check xem đã đạt quorum Prepare chưa
 	if !r.prepared(view, sequenceNo, digest) {
 		log.Info().Msg("request not yet prepared, commit not due yet")
 		return false
@@ -115,11 +115,11 @@ func (r *Replica) processCommit(ctx context.Context, replica peer.ID, commit Com
 	}
 
 	// Nếu Committed thì thực thi yêu cầu
-	// err := r.execute(ctx, commit.View, commit.SequenceNumber, commit.Digest)
-	// if err != nil {
-	// 	return fmt.Errorf("request execution failed: %w", err)
+	err := r.execute(ctx, commit.View, commit.SequenceNumber, commit.Digest)
+	if err != nil {
+		return fmt.Errorf("request execution failed: %w", err)
 
-	// }
+	}
 
 	return nil
 }

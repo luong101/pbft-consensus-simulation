@@ -49,22 +49,27 @@ func MainpBFT() {
 		host4.ID(),
 	}
 	// Cluster ID for replicas
-	clusterID := "test-cluster-ID"
+	clusterID := "example-cluster"
+
+	// Ask if node is Byzantine
+	isByzantine := false
+	fmt.Println("Is this node Byzantine (0: No | 1: Yes): ")
+	fmt.Scanln(&isByzantine)
 
 	// Create replicas for host
-	replica1, err := NewReplica(log, host1, peers, clusterID)
+	replica1, err := NewReplica(log, host1, peers, clusterID, isByzantine)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create replica")
 	}
-	replica2, err := NewReplica(log, host2, peers, clusterID)
+	replica2, err := NewReplica(log, host2, peers, clusterID, isByzantine)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create replica")
 	}
-	replica3, err := NewReplica(log, host3, peers, clusterID)
+	replica3, err := NewReplica(log, host3, peers, clusterID, isByzantine)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create replica")
 	}
-	replica4, err := NewReplica(log, host4, peers, clusterID)
+	replica4, err := NewReplica(log, host4, peers, clusterID, isByzantine)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create replica")
 	}
@@ -81,7 +86,7 @@ func MainpBFT() {
 		fmt.Printf("Host Multiaddress: %s/p2p/%s\n", addr, replica1.host.ID())
 	}
 	connectAllHost(pbft_Host)
-	
+
 	defer replica1.Shutdown()
 
 	replica1.broadcast(context.Background(), "hello")

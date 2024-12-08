@@ -4,6 +4,7 @@ import (
 	node "RAFT/pkg/node"
 	"context"
 	"fmt"
+
 	// "log"
 	"math"
 
@@ -25,7 +26,7 @@ func (dh *DiscoverHandler) HandlePeerFound(pi peer.AddrInfo) {
 		fmt.Printf("Failed to connect to peer %s: %v\n", pi.ID, err)
 		return
 	}
-	
+
 	// Send a Hello message
 	// dh.Node.SendHello(pi.ID)
 	dh.Node.Host.Peerstore().AddAddrs(pi.ID, pi.Addrs, math.MaxInt64)
@@ -63,12 +64,7 @@ func main() {
 	// fmt.Printf("=== Số lượng node: %d\n", len(peers))
 	// // Keep the program running
 
-
 	pBFT.MainpBFT()
-	
-	
-	
-	
-	
+
 	// select {}
 }

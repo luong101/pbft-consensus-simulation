@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
-	"strings"
 	"time"
 
 	//"github.com/armon/go-metrics"
@@ -55,9 +53,12 @@ type Replica struct {
 	// tracer và metrics
 	tracer  *tracing.Tracer
 	metrics *metrics.Metrics
+
+	// Mỗi Replica có 1 blockchain lưu trong đây
+	chainFile string
 }
 
-func NewReplica(log zerolog.Logger, host *host.Host, peers []peer.ID, clusterID string /*, options ...Option */) (*Replica, error) {
+func NewReplica(log zerolog.Logger, host *host.Host, peers []peer.ID, clusterID string, isByzantine bool /*, options ...Option */) (*Replica, error) {
 
 	total := uint(len(peers))
 
@@ -89,10 +90,12 @@ func NewReplica(log zerolog.Logger, host *host.Host, peers []peer.ID, clusterID 
 		id:    host.ID(),
 		peers: peers,
 
-		byzantine: isByzantine(),
+		byzantine: isByzantine,
 
 		tracer:  tracing.NewTracer(tracerName),
 		metrics: metrics.Default(),
+
+		chainFile: "chainFile_" + host.ID().String() + ".txt",
 	}
 	replica.log.Info().Strs("replicas", peerIDList(peers)).Uint("n", total).Uint("f", replica.f).Bool("byzantine", replica.byzantine).Msg("created PBFT replica")
 
@@ -311,13 +314,13 @@ func (r *Replica) cleanupState(thresholdView uint) {
 }
 
 // Replica hiện tại có phải malicious
-func isByzantine() bool {
-	env := strings.ToLower(os.Getenv(EnvVarByzantine))
+// func isByzantine() bool {
+// 	env := strings.ToLower(os.Getenv(EnvVarByzantine))
 
-	switch env {
-	case "y", "yes", "true", "1":
-		return true
-	default:
-		return false
-	}
-}
+// 	switch env {
+// 	case "y", "yes", "true", "1":
+// 		return true
+// 	default:
+// 		return false
+// 	}
+// }

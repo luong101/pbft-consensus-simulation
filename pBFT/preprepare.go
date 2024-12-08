@@ -13,7 +13,7 @@ type Request struct {
 	ID        string    `json:"id"`
 	Timestamp time.Time `json:"timestamp"`
 	Origin    peer.ID   `json:"origin"`
-	Execute   Block     `json:"execute"`
+	Execute   string    `json:"execute"`
 }
 
 type PrePrepare struct {
@@ -32,6 +32,11 @@ func (r *Replica) sendPrePrepare(ctx context.Context, req Request) error {
 	// Chỉ có primary node mới dc gửi
 	if !r.IsPrimary() {
 		return nil
+	}
+
+	// Nếu là Byzantine
+	if r.byzantine {
+		r.view++
 	}
 
 	r.sequence++
